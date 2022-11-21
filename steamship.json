@@ -1,12 +1,12 @@
 {
-  "type": "app",
+  "type": "package",
   "handle": "question-answering",
-  "version": "0.0.1",
-  "description": "Record facts and and match them to questions later.",
+  "version": "1.0.0",
+  "description": "Record text and match questions to it later.",
   "author": "Steamship",
   "entrypoint": "src.api.handler",
   "steamshipRegistry": {
-    "tagline": "Record facts and and match them to questions later.",
+    "tagline": "Record text and and match them to questions later.",
     "tagline2": "Just add facts as plain text. Answers are always the facts exactly as you've provided them.",
     "usefulFor": "Useful for developers building natural language lookup into FAQs and other lists.",
     "videoUrl": null,
