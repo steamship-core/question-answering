@@ -1,4 +1,5 @@
 """Question Answering Package."""
+from typing import Dict
 
 from steamship import EmbeddingIndex, PluginInstance, Steamship, SteamshipError
 from steamship.data.embeddings import IndexInsertResponse, QueryResults
@@ -29,14 +30,14 @@ class QuestionAnsweringPackage(PackageService):
         )
 
     @post("learn")
-    def learn(self, fact: str = None) -> IndexInsertResponse:
+    def learn(self, fact: str = None, metadata: Dict = None) -> IndexInsertResponse:
         """Learns a new fact."""
         if fact is None:
             raise SteamshipError(message="Empty fact provided to learn.")
 
         # Reindex is usually good to call right away -- this will make sure that the embedding
         # gets created.
-        res = self.index.insert(fact, reindex=True)
+        res = self.index.insert(fact, metadata=metadata, reindex=True)
 
         # This is also good to do as it will help your index scale. This creates an AKNN
         # structure on disk, as opposed to the KNN structure that would have otherwise been used.
@@ -50,7 +51,7 @@ class QuestionAnsweringPackage(PackageService):
         if query is None:
             raise SteamshipError(message="Empty query provided.")
 
-        res = self.index.search(query=query, k=k)
+        res = self.index.search(query=query, k=k, include_metadata=True)
         res.wait()
         return res.output
 
