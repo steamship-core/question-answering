@@ -1,23 +1,42 @@
 {
-  "type": "package",
-  "handle": "question-answering",
-  "version": "1.0.0",
-  "description": "Record text and match questions to it later.",
-  "author": "Steamship",
-  "entrypoint": "src.api.handler",
-  "steamshipRegistry": {
-    "tagline": "Record text and and match them to questions later.",
-    "tagline2": "Just add facts as plain text. Answers are always the facts exactly as you've provided them.",
-    "usefulFor": "Useful for developers building natural language lookup into FAQs and other lists.",
-    "videoUrl": null,
-    "githubUrl": "https://github.com/steamship-packages/question-answering/",
-    "demoUrl": null,
-    "blogUrl": null,
-    "jupyterUrl": null,
-    "authorName": "Steamship",
-    "authorEmail": "hello@steamship.com",
-    "authorTwitter": "@GetSteamship",
-    "authorUrl": "https://www.steamship.com/",
-    "tags": ["Embeddings", "Question Answering", "Chatbots", "Search", "NLU"]
-  }
+	"type": "package",
+	"handle": "question-answering",
+	"version": "0.0.7",
+	"description": "",
+	"author": "steamship",
+	"entrypoint": "Unused",
+	"public": true,
+	"plugin": null,
+	"build_config": {
+		"ignore": [
+			"tests",
+			"examples"
+		]
+	},
+	"configTemplate": {
+		"index_name": {
+			"type": "string",
+			"description": null,
+			"default": null
+		}
+	},
+	"steamshipRegistry": {
+		"tagline": "Answers questions based on a populated index",
+		"tagline2": null,
+		"usefulFor": null,
+		"videoUrl": null,
+		"githubUrl": null,
+		"demoUrl": null,
+		"blogUrl": null,
+		"jupyterUrl": null,
+		"authorGithub": "",
+		"authorName": "steamship",
+		"authorEmail": null,
+		"authorTwitter": null,
+		"authorUrl": null,
+		"tags": [
+			"Question Answering",
+			"Embeddings"
+		]
+	}
 }

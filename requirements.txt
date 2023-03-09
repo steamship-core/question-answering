@@ -1,1 +1,3 @@
-steamship===2.2.0
+steamship-langchain
+steamship
+langchain
