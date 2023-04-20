@@ -1,13 +1,9 @@
-"""Tests."""
+from steamship import Steamship
+from steamship_langchain.vectorstores import SteamshipVectorStore
+from src.api import QuestionAnswering
+
 import os
 from typing import List
-
-from steamship import Steamship
-
-from src.api import QuestionAnsweringPackage
-
-__copyright__ = "Steamship"
-__license__ = "MIT"
 
 
 def _get_test_facts() -> List[str]:
@@ -16,48 +12,30 @@ def _get_test_facts() -> List[str]:
         return f.read().split("\n")
 
 
-def test_basic_similarity_lookup():
+def test_answer():
     """Tests that our embedder properly associates certain sentences nearby known facts in embedding space."""
-    client = Steamship()
-    qa = QuestionAnsweringPackage(client)
 
-    facts = _get_test_facts()
-    for fact in facts:
-        response = qa.learn(fact=fact)
-        assert response is not None
+    with Steamship.temporary_workspace() as client:
+        qa = QuestionAnswering(client=client, config={"index_name": "test-index"})
 
-    tests = [
-        ("What does Ted think about eggs?", "Ted thinks eggs are good."),
-        ("Can armadillos eat everything?", "Armadillos are allergic to cake."),
-        ("Who should I give this apple to?", "Jerry likes to eat apples."),
-    ]
+        vectorstore = SteamshipVectorStore(client=client,
+                                           index_name="test-index",
+                                           embedding="text-embedding-ada-002")
 
-    for test in tests:
-        response = qa.query(query=test[0], k=1)
-        assert response.items is not None
-        assert len(response.items) == 1
-        assert response.items[0].value.value == test[1]
+        facts = _get_test_facts()
+        metadatas = [{"source": f"test-{i}"} for i, _ in enumerate(facts)]
+        vectorstore.add_texts(facts, metadatas)
 
+        tests = [
+            ("What does Ted think about eggs?", "Ted thinks eggs are good."),
+            ("Can all animals eat cake?", "Armadillos are allergic to cake."),
+            ("Can armadillos eat everything?", "Armadillos are allergic to cake."),
+            ("Who would like to eat this apple?", "Jerry likes to eat apples.")
+        ]
 
-def test_lookup_with_metadata():
-    """Tests that our embedder properly associates certain sentences nearby known facts in embedding space."""
-    client = Steamship()
-    qa = QuestionAnsweringPackage(client)
-
-    qa.learn(
-        fact="Firm shall repay on the fourth of the month.",
-        metadata={"paragraph": 1, "filename": "contract.txt"},
-    )
-
-    qa.learn(
-        fact="Client shall henceforth be referred to as THE CLIENT.",
-        metadata={"paragraph": 2, "filename": "some_other_contract.txt"},
-    )
-
-    resp = qa.query("You need to repay on the first of the month", k=1)
-
-    assert resp.items is not None
-    assert len(resp.items) == 1
-    assert resp.items[0].value.metadata is not None
-    assert resp.items[0].value.metadata.get("paragraph") == 1
-    assert resp.items[0].value.metadata.get("filename") == "contract.txt"
+        for test in tests:
+            response = qa.answer(question=test[0], k=1)
+            print(response["answer"])
+            assert(response["answer"] is not None)
+            assert(response["answer"].strip() != "I don't know.")
+            assert(response["source_documents"][0].page_content == test[1])

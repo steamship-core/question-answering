@@ -1,59 +1,41 @@
-"""Question Answering Package."""
-from typing import Dict
+from typing import Dict, Type
 
-from steamship import EmbeddingIndex, PluginInstance, Steamship, SteamshipError
-from steamship.data.embeddings import IndexInsertResponse, QueryResults
-from steamship.invocable import PackageService, create_handler, post
+from steamship.invocable import Config, post, PackageService
+from steamship_langchain.cache import SteamshipCache
+from steamship_langchain.llms import OpenAI
+from steamship_langchain.vectorstores import SteamshipVectorStore
+
+import langchain
+from langchain.chains import VectorDBQAWithSourcesChain
 
 
-class QuestionAnsweringPackage(PackageService):
-    """Simple question answering class that works with different embedding models."""
+class QuestionAnswering(PackageService):
 
-    embedder: PluginInstance
-    index: EmbeddingIndex
+    class QuestionAnsweringConfig(Config):
+        index_name: str
 
-    def __init__(self, client: Steamship, **kwargs):
-        super().__init__(client, **kwargs)
+    config: QuestionAnsweringConfig
 
-        # First we create an embedder. For this example package we'll use
-        # OpenAI's Davinci 001
-        self.embedder = self.client.use_plugin(
-            "openai-embedder",
-            config={"model": "text-similarity-davinci-001", "dimensionality": 12288},
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        langchain.verbose = True
+        langchain.llm_cache = SteamshipCache(self.client)
+        self._index = SteamshipVectorStore(client=self.client,
+                                           index_name=self.config.index_name,
+                                           embedding="text-embedding-ada-002")
+
+    @classmethod
+    def config_cls(cls) -> Type[Config]:
+        return cls.QuestionAnsweringConfig
+
+    @post("answer", public=True)
+    def answer(self, question: str, k: int = 4) -> Dict[str, str]:
+        chain = VectorDBQAWithSourcesChain.from_chain_type(
+            OpenAI(client=self.client, temperature=0),
+            chain_type="stuff",
+            vectorstore=self._index,
+            return_source_documents=True,
+            verbose=True,
+            k=k,
         )
-
-        self.index = EmbeddingIndex.create(
-            client=self.client,
-            handle="my-qa-index",
-            plugin_instance=self.embedder.handle,
-            fetch_if_exists=True,
-        )
-
-    @post("learn")
-    def learn(self, fact: str = None, metadata: Dict = None) -> IndexInsertResponse:
-        """Learns a new fact."""
-        if fact is None:
-            raise SteamshipError(message="Empty fact provided to learn.")
-
-        # Reindex is usually good to call right away -- this will make sure that the embedding
-        # gets created.
-        res = self.index.insert(fact, metadata=metadata, reindex=True)
-
-        # This is also good to do as it will help your index scale. This creates an AKNN
-        # structure on disk, as opposed to the KNN structure that would have otherwise been used.
-        self.index.create_snapshot()
-
-        return res
-
-    @post("query")
-    def query(self, query: str = None, k: int = 1) -> QueryResults:
-        """Learns a new fact."""
-        if query is None:
-            raise SteamshipError(message="Empty query provided.")
-
-        res = self.index.search(query=query, k=k, include_metadata=True)
-        res.wait()
-        return res.output
-
-
-handler = create_handler(QuestionAnsweringPackage)
+        return chain({"question": question})
